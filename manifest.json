@@ -1,6 +1,6 @@
 {
-    "name": "音声登録アプリ",
-    "short_name": "音声アプリ",
+    "name": "HIBIKASE",
+    "short_name": "HIBIKASE",
     "start_url": "./index.html",
     "display": "standalone",
     "background_color": "#ffffff",
