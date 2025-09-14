@@ -1,0 +1,156 @@
+body {
+    font-family: sans-serif;
+    padding: 1rem;
+    background: #fafafa;
+    max-width: 800px;
+    margin: auto;
+}
+
+.add-file {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    row-gap: 1em;
+    margin-bottom: 2em;
+}
+
+.add-file label,
+.add-file input,
+.add-file button {
+    display: block;
+}
+
+.add-title,
+.audio-file {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    column-gap: 1em;
+}
+
+.recorder {
+    text-align: center;
+}
+
+.unlock {
+    text-align: center;
+    margin-top: 2em;
+}
+
+/* ボタンスタイル */
+.add-file button,
+.recorder button,
+.select button,
+.unlock button {
+    font-weight: bold;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: none;
+    background: #05a031;
+    color: #fff;
+    cursor: pointer;
+}
+
+/* 入力や録音エリアをカード風に */
+.card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+/* グリッド配置 */
+.button-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 0.5rem;
+}
+
+/* 各音声ボタン */
+.audio-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+
+    border: none;
+    border-radius: 12px;
+    padding: 1rem;
+    aspect-ratio: 1 / 1;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s ease;
+}
+
+/* 無効状態 */
+.audio-item.disabled {
+    background: #bbb !important;
+    cursor: not-allowed;
+}
+
+/* クリックで沈む */
+.audio-item:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
+    background: #3a9edb;
+}
+
+/* チェックボックス */
+.audio-item .select-checkbox {
+    align-self: flex-start;
+    margin-bottom: 0.3rem;
+    width: 18px;
+    /* ← 好きなサイズに調整できる */
+    height: 18px;
+    transform: scale(1.5);
+    /* ブラウザによって効きやすい方法 */
+    cursor: pointer;
+}
+
+/* 音声再生ボタン内ボタンスタイル消去 */
+.audio-item button {
+    background-color: unset;
+    border: none;
+}
+
+/* 音声タイトル */
+.audio-title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin-bottom: 0.3rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    width: 100%;
+    text-align: center;
+}
+
+/* 時間表示 */
+.duration-label {
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+}
+
+/* 音量スライダー */
+.audio-item input[type="range"] {
+    width: 100%;
+    margin-top: 0.3rem;
+}
+
+.hidden {
+    display: none;
+}

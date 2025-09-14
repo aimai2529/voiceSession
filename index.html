@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HIBIKASE</title>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="manifest" href="./manifest.json">
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("./sw.js").then(() => {
+                console.log("Service Worker registered!");
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <h1>HIBIKASE</h1>
+
+    <!-- タイトルと音声ファイルの入力欄 -->
+    <div class="add-file">
+        <div class="add-title">
+            <label for="title">TITLE</label>
+            <input type="text" id="title" placeholder="例：目星！！！" />
+        </div>
+        <div class="audio-file">
+            <label for="audio">AUDIO</label>
+            <input type="file" id="audio" accept="audio/*" />
+        </div>
+
+        <!-- 音声ファイル追加ボタン -->
+        <button id="addBtn">音声を追加</button>
+        <div class="audio-file">
+            <label for="video">VIDEO</label>
+            <input type="file" id="video" accept="video/*" />
+        </div>
+        <div>
+            <button id="extractBtn">動画から音声を抽出</button>
+            <p style="margin: 0; font-size: 12px;">※少し時間がかかります</p>
+        </div>
+    </div>
+
+    <!-- 録音機能セクション -->
+    <div class="recorder">
+        <h2>🎤 録音して追加</h2>
+        <button id="recordBtn">録音開始</button>
+        <button id="stopBtn" disabled>停止</button>
+        <span id="recordingStatus" style="color: red; font-weight: bold; margin-left: 1rem; display: none;">
+            ●録音中
+        </span>
+    </div>
+
+    <!-- 選択モード・削除ボタン -->
+    <div style="margin-top: 2rem;" class="select">
+        <button id="selectModeBtn">選択モードを開始</button>
+        <button id="deleteSelectedBtn" class="hidden">選択した音声を削除</button>
+        <!-- アクティブ切り替えボタン -->
+        <button id="toggleActiveBtn" class="hidden">選択した音声を有効/無効に切り替え</button>
+    </div>
+
+    <!-- 登録音声一覧の表示エリア -->
+    <div class="button-list" id="buttonList"></div>
+
+    <div class="unlock">
+        <input type="text" id="unlockInput" placeholder="パスワードを入力" />
+        <button id="unlockBtn">解放！</button>
+    </div>
+    <script src="./script.js"></script>
+</body>
+
+</html>
+
+<!-- やりたいこと
+・動画から音声データ抽出
+・MP3ファイルにする（必須じゃない）
+・録音してるときに　録音中　の文言
+・パスをいれたら特定の音源が解放されるようにする
+・UIをボタン風にする(横3の正方形かな)
+・アクティブ非アクティブができるようにする
+
+・さてはこれで録音した音声秒数ない
+-->
