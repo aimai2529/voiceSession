@@ -1,6 +1,6 @@
 body {
     font-family: sans-serif;
-    padding: 1rem;
+    padding: 0 1rem;
     background: #fafafa;
     max-width: 800px;
     margin: auto;
@@ -127,6 +127,7 @@ h1 {
 .audio-item button {
     background-color: unset;
     border: none;
+    color: #000;
 }
 
 /* 音声タイトル */
@@ -155,4 +156,10 @@ h1 {
 
 .hidden {
     display: none;
+}
+
+small {
+    display: block;
+    text-align: center;
+    margin-top: 1em;
 }
