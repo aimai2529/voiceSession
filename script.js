@@ -13,6 +13,15 @@ function fileToBase64(file) {
     });
 }
 
+// Blobをbase64に変換
+async function blobToBase64(blob) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+    });
+}
+
 // ローカルストレージにデータを保存する関数
 function saveToLocal(data) {
     localStorage.setItem(localKey, JSON.stringify(data));
@@ -162,94 +171,140 @@ document.getElementById("addBtn").addEventListener("click", async () => {
     fileInput.value = "";
 });
 
-// 音声抽出関数
+// --- 動画から音声抽出（captureStream + fallback） ---
 async function extractAudioFromVideo(file) {
     return new Promise((resolve, reject) => {
         const video = document.createElement("video");
         video.src = URL.createObjectURL(file);
+        video.crossOrigin = "anonymous";
         video.muted = true;
         video.playsInline = true;
-        video.crossOrigin = "anonymous";
 
         video.onloadeddata = () => {
-            const stream = video.captureStream();
-            const audioTracks = stream.getAudioTracks();
-            if (!audioTracks.length) {
-                reject("音声トラックが見つかりません");
-                return;
+            try {
+                if (video.captureStream) {
+                    // --- 通常ルート ---
+                    const stream = video.captureStream();
+                    const audioTracks = stream.getAudioTracks();
+                    if (!audioTracks.length) return reject("音声トラックなし");
+                    const audioStream = new MediaStream(audioTracks);
+                    const recorder = new MediaRecorder(audioStream);
+                    const chunks = [];
+                    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+                    recorder.onstop = () => {
+                        resolve(new Blob(chunks, { type: "audio/webm" }));
+                    };
+                    recorder.start();
+                    video.play();
+                    video.onended = () => recorder.stop();
+                } else {
+                    // --- iOS fallback ---
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const source = audioCtx.createMediaElementSource(video);
+                    const dest = audioCtx.createMediaStreamDestination();
+                    source.connect(dest);
+                    source.connect(audioCtx.destination);
+
+                    const recorder = new MediaRecorder(dest.stream);
+                    const chunks = [];
+                    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+                    recorder.onstop = () => {
+                        resolve(new Blob(chunks, { type: "audio/webm" }));
+                    };
+
+                    recorder.start();
+                    video.play();
+                    video.onended = () => recorder.stop();
+                }
+            } catch (err) {
+                reject(err);
             }
-
-            const audioStream = new MediaStream(audioTracks);
-            const recorder = new MediaRecorder(audioStream);
-            const chunks = [];
-
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunks.push(e.data);
-            };
-            recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: "audio/webm" });
-                resolve(blob);
-            };
-
-            recorder.start();
-            video.play();
-
-            video.onended = () => {
-                recorder.stop();
-            };
         };
     });
 }
 
-// 録音機能の変数とUIボタン
+// --- 録音処理（MediaRecorder + iOS fallback） ---
 let mediaRecorder;
 let recordedChunks = [];
+let audioCtx, processor, input;
 const recordBtn = document.getElementById("recordBtn");
 const stopBtn = document.getElementById("stopBtn");
 
-// 録音開始処理
+// iOS fallback用変数
+let fallbackData = [];
+
 recordBtn.addEventListener("click", async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     recordedChunks = [];
-    mediaRecorder = new MediaRecorder(stream);
+    fallbackData = [];
 
-    mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) recordedChunks.push(e.data);
-    };
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported("audio/webm")) {
+        // --- 通常ルート ---
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+        mediaRecorder.onstop = async () => {
+            const blob = new Blob(recordedChunks, { type: "audio/webm" });
+            const base64 = await blobToBase64(blob);
+            await saveRecorded(base64);
+        };
+        mediaRecorder.start();
+    } else {
+        // --- iOS fallback ---
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        input = audioCtx.createMediaStreamSource(stream);
+        processor = audioCtx.createScriptProcessor(4096, 1, 1);
 
-    mediaRecorder.onstop = async () => {
-        const blob = new Blob(recordedChunks, { type: "audio/webm" });
-        const base64 = await fileToBase64(blob);
+        processor.onaudioprocess = (e) => {
+            const data = e.inputBuffer.getChannelData(0);
+            fallbackData.push(new Float32Array(data));
+        };
 
-        const title = prompt("録音にタイトルをつけてね！");
-        if (title) {
-            const data = JSON.parse(localStorage.getItem(localKey) || "[]");
-            data.push({ title, base64, volume: 1.0 });
-            saveToLocal(data);
-            renderAll();
-        }
+        input.connect(processor);
+        processor.connect(audioCtx.destination);
+    }
 
-        // 停止後は表示を消す
-        document.getElementById("recordingStatus").style.display = "none";
-    };
-
-    mediaRecorder.start();
     recordBtn.disabled = true;
     stopBtn.disabled = false;
-
-    // 録音中表示ON
     document.getElementById("recordingStatus").style.display = "inline";
 });
 
-// 録音停止処理
-stopBtn.addEventListener("click", () => {
-    mediaRecorder.stop();
+stopBtn.addEventListener("click", async () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+    } else if (audioCtx) {
+        processor.disconnect();
+        input.disconnect();
+
+        // Float32Array → AudioBuffer
+        const length = fallbackData.reduce((acc, arr) => acc + arr.length, 0);
+        const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
+        let offset = 0;
+        fallbackData.forEach((arr) => {
+            buffer.getChannelData(0).set(arr, offset);
+            offset += arr.length;
+        });
+
+        const wavBlob = await bufferToBlob(buffer, audioCtx.sampleRate);
+        const base64 = await blobToBase64(wavBlob);
+        await saveRecorded(base64);
+    }
+
     recordBtn.disabled = false;
     stopBtn.disabled = true;
-
-    // 停止時に確実に非表示
     document.getElementById("recordingStatus").style.display = "none";
 });
+
+async function saveRecorded(base64) {
+    const title = prompt("録音にタイトルをつけてね！");
+    if (title) {
+        const data = JSON.parse(localStorage.getItem(localKey) || "[]");
+        data.push({ title, base64, volume: 1.0, active: true });
+        saveToLocal(data);
+        renderAll();
+    }
+}
 
 // 選択モードの切り替え処理
 const selectionBtn = document.getElementById("selectModeBtn");
